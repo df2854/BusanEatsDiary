@@ -4,29 +4,24 @@
     <meta charset="utf-8">
     <title>부산 맛집 다이어리</title>
     <link rel="stylesheet" type="text/css" href="map_page_style.css">
-    <script src="https://kit.fontawesome.com/73eb7670a6.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <header>
-        <h1 id="title">부산 맛집 다이어리</h1>
-        <h2 id="subtitle">나만의 부산 맛집 지도를 만들어보세요!</h2>
-    </header>
-    <div class="container">
-        <div id="menu_wrap">
-            <div id="search_wrap">
-                <div class="search">
+    <div class="map_wrap">
+        <div id="search_wrap">
+            <div class="option">
+                <div>
                     <form onsubmit="searchPlaces(); return false;">
-                        <fieldset>
-                            <input type="search" id="keyword" size="15" placeholder="검색어를 입력하세요"> 
-                            <button type="submit"><i class="fa fa-solid fa-search"></i></button> 
-                        </fieldset> 
+                        맛집 : <input type="text" value="맛집" id="keyword" size="15"> 
+                        <button type="submit">검색하기</button> 
                     </form>
                 </div>
             </div>
-            <ul id="placesList"></ul>
-            <div id="pagination"></div>
         </div>
-        <div id="map"></div>
+    </div>
+    <div id="map" style="width:100%;height:500px;position:relative;overflow:hidden;margin: 0 auto;"></div>
+    <div id="menu_wrap">
+        <ul id="placesList"></ul>
+        <div id="pagination"></div>
     </div>
 
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=a26f899051847bb87c59973e9aeb3a7e&libraries=services"></script>
@@ -54,31 +49,27 @@
     loadFixedPlaces();
     
     window.onload = function() {
-        adjustMenuWrapHeight();
+        adjustMenuWrapWidth();
         loadRatingsFromLocalStorage();
     };
     
     window.onresize = function() {
-        adjustMenuWrapHeight();
+        adjustMenuWrapWidth();
     };
     
-    function adjustMenuWrapHeight() {
-        var mapHeight = document.getElementById('map').clientHeight;
-        document.getElementById('menu_wrap').style.height = mapHeight + 'px';
+    function adjustMenuWrapWidth() {
+        var mapWidth = document.getElementById('map').clientWidth;
+        document.getElementById('menu_wrap').style.width = mapWidth + 'px';
     }    
 
     function searchPlaces() {
         var keyword = document.getElementById('keyword').value;
+        var bounds = map.getBounds();
 
         if (!keyword.replace(/^\s+|\s+$/g, '')) {
             alert('키워드를 입력해주세요!');
             return false;
         }
-
-        var bounds = new kakao.maps.LatLngBounds(
-            new kakao.maps.LatLng(35.052664, 128.847046), 
-            new kakao.maps.LatLng(35.235073, 129.283092)  
-        );
 
         ps.keywordSearch(keyword, placesSearchCB, { bounds: bounds, pageable: true, size: 10 });
 
@@ -148,11 +139,15 @@
                 '<div class="info">' +
                 '   <h5>' + places.place_name + '</h5>';
 
+        if (places.road_address_name) {
+            itemStr += '    <span>' + places.road_address_name + '</span>' +
+                '   <span class="jibun gray">' + places.address_name + '</span>';
+        } else {
+            itemStr += '    <span>' + places.address_name + '</span>';
+        }
 
-        itemStr += '    <span>' + places.road_address_name + '</span>'
-      
         itemStr += '  <span class="tel">' + places.phone + '</span>' +
-            '  <button onclick="addPlace(' + index + ')">저장하기</button>' +
+            '  <button onclick="addPlace(' + index + ')">추가하기</button>' +
             '</div>';
 
         el.innerHTML = itemStr;
@@ -281,98 +276,51 @@
 
     function displayOverlay(marker, place) {
         var title = place.place_name;
-        var content = `
-            <div class="customoverlay">
-                <div class="title">
-                    ${title}
-                    <div class="close" onclick="closeOverlay('${place.place_name}')" title="닫기"></div>
-                </div>
-                <div class="body">
-                    <div class="star-rating">
-                        <input type="radio" id="1-star-${place.id}" name="rating-${place.id}" value="1" /><label for="1-star-${place.id}" class="star">&#9733;</label>
-                        <input type="radio" id="2-stars-${place.id}" name="rating-${place.id}" value="2" /><label for="2-stars-${place.id}" class="star">&#9733;</label>
-                        <input type="radio" id="3-stars-${place.id}" name="rating-${place.id}" value="3" /><label for="3-stars-${place.id}" class="star">&#9733;</label>
-                        <input type="radio" id="4-stars-${place.id}" name="rating-${place.id}" value="4" /><label for="4-stars-${place.id}" class="star">&#9733;</label>
-                        <input type="radio" id="5-stars-${place.id}" name="rating-${place.id}" value="5" /><label for="5-stars-${place.id}" class="star">&#9733;</label>
-                    </div>
-                    <div class="review">
-                        <input type="text" id="review-input-${place.id}" placeholder="한줄평을 남겨보세요" />
-                        <button onclick="addReview('${place.id}')">등록</button>
-                    </div>
-                    <ul id="reviews-list-${place.id}"></ul>
-                    <button class="btn" onclick="removePlace('${place.place_name}')">마커 삭제하기</button>
-                </div>
-            </div>`;
-    
+        var content = '<div class="customoverlay">' +
+                            '<div class="title">' + 
+                                title + 
+                                '<div class="close" onclick="closeOverlay(\'' + place.place_name + '\')" title="닫기"></div>' + 
+                            '</div>' +
+                            '<div class="body">' +
+                                '<div class="star-rating">' +
+                                    '<input type="radio" id="1-star-' + place.id + '" name="rating-' + place.id + '" value="1" /><label for="1-star-' + place.id + '" class="star">&#9733;</label>' +
+                                    '<input type="radio" id="2-stars-' + place.id + '" name="rating-' + place.id + '" value="2" /><label for="2-stars-' + place.id + '" class="star">&#9733;</label>' +
+                                    '<input type="radio" id="3-stars-' + place.id + '" name="rating-' + place.id + '" value="3" /><label for="3-stars-' + place.id + '" class="star">&#9733;</label>' +
+                                    '<input type="radio" id="4-stars-' + place.id + '" name="rating-' + place.id + '" value="4" /><label for="4-stars-' + place.id + '" class="star">&#9733;</label>' +
+                                    '<input type="radio" id="5-stars-' + place.id + '" name="rating-' + place.id + '" value="5" /><label for="5-stars-' + place.id + '" class="star">&#9733;</label>' +
+                                '</div>' +
+                                '<button class="btn" onclick="removePlace(\'' + place.place_name + '\')">마커 삭제하기</button>' +
+                            '</div>' +
+                        '</div>';
+
         var overlay = new kakao.maps.CustomOverlay({
             content: content,
             map: map,
             position: marker.getPosition()
         });
-    
+
         overlayMap[place.place_name] = overlay;
-    
-        document.querySelectorAll(`input[name="rating-${place.id}"]`).forEach(function(star) {
+
+        document.querySelectorAll('input[name="rating-' + place.id + '"]').forEach(function(star) {
             star.addEventListener('change', function() {
                 var rating = this.value;
                 place.rating = parseInt(rating);
-                localStorage.setItem(`rating-${place.id}`, rating);
+                localStorage.setItem('rating-' + place.id, rating);
             });
         });
-    
+
         if (place.rating) {
-            document.getElementById(`${place.rating}-stars-${place.id}`).checked = true;
+            document.getElementById(place.rating + '-stars-' + place.id).checked = true;
         }
-    
-        loadReviews(place.id);
+
         overlay.setMap(map);
     }
 
-    function addReview(placeId) {
-        var reviewInput = document.getElementById(`review-input-${placeId}`);
-        var reviewText = reviewInput.value.trim();
-    
-        if (reviewText) {
-            var reviews = JSON.parse(localStorage.getItem(`reviews-${placeId}`)) || [];
-            reviews.push(reviewText);
-            localStorage.setItem(`reviews-${placeId}`, JSON.stringify(reviews));
-            reviewInput.value = '';
-            loadReviews(placeId);
+    function closeOverlay(placeName) {
+        if (overlayMap[placeName]) {
+            overlayMap[placeName].setMap(null);
+            delete overlayMap[placeName];
         }
-    }
-    
-    function loadReviews(placeId) {
-        var reviewsList = document.getElementById(`reviews-list-${placeId}`);
-        var reviews = JSON.parse(localStorage.getItem(`reviews-${placeId}`)) || [];
-    
-        reviewsList.innerHTML = '';
-        reviews.forEach((review, index) => {
-            var reviewItem = document.createElement('li');
-            reviewItem.innerHTML = `
-                <span>${review}</span>
-                <button onclick="editReview('${placeId}', ${index})">수정</button>
-                <button onclick="deleteReview('${placeId}', ${index})">삭제</button>
-            `;
-            reviewsList.appendChild(reviewItem);
-        });
-    }
-    
-    function editReview(placeId, index) {
-        var reviews = JSON.parse(localStorage.getItem(`reviews-${placeId}`));
-        var newReview = prompt("한줄평을 수정하세요", reviews[index]);
-    
-        if (newReview !== null) {
-            reviews[index] = newReview;
-            localStorage.setItem(`reviews-${placeId}`, JSON.stringify(reviews));
-            loadReviews(placeId);
-        }
-    }
-    
-    function deleteReview(placeId, index) {
-        var reviews = JSON.parse(localStorage.getItem(`reviews-${placeId}`));
-        reviews.splice(index, 1);
-        localStorage.setItem(`reviews-${placeId}`, JSON.stringify(reviews));
-        loadReviews(placeId);
     }
 
     function removePlace(title) {
